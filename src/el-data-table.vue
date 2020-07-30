@@ -13,7 +13,9 @@
         v-if="hasSearchForm"
         ref="searchForm"
         :content="_searchForm"
+        bts-position="left"
         inline
+        class="searchForm"
         @submit.native.prevent
       >
         <slot
@@ -23,8 +25,21 @@
         />
         <!--@slot 额外的搜索内容, 当searchForm不满足需求时可以使用-->
         <slot name="search"></slot>
-        <el-form-item>
+        <el-form-item class="searchForm__btns">
           <!--https://github.com/ElemeFE/element/pull/5920-->
+          <!--@collapse 自定义折叠按钮, 默认的样式文案不满足时可以使用，scope 默认返回当前折叠状态 Boolean -->
+          <slot name="collapse" :isSearchCollapse="isSearchCollapse">
+            <el-button
+              v-if="canSearchCollapse"
+              type="text"
+              :size="buttonSize"
+              @click="isSearchCollapse = !isSearchCollapse"
+              >{{ isSearchCollapse ? '更多' : '收起'
+              }}<i
+                :class="`el-icon-arrow-${isSearchCollapse ? 'down' : 'up'}`"
+              ></i
+            ></el-button>
+          </slot>
           <el-button
             native-type="submit"
             type="primary"
@@ -35,231 +50,227 @@
           <el-button :size="buttonSize" @click="resetSearch">重置</el-button>
         </el-form-item>
       </el-form-renderer>
-
-      <el-form v-if="hasHeader">
-        <el-form-item>
-          <el-button
-            v-if="hasNew"
-            type="primary"
-            :size="buttonSize"
-            @click="onDefaultNew"
-            >{{ newText }}</el-button
-          >
-          <template v-for="(btn, i) in headerButtons">
-            <self-loading-button
-              v-if="'show' in btn ? btn.show(selected) : true"
-              :key="i"
-              :disabled="'disabled' in btn ? btn.disabled(selected) : false"
-              :click="btn.atClick"
-              :params="selected"
-              :callback="getList"
-              :size="buttonSize"
-              v-bind="btn"
-            >
-              {{
-                typeof btn.text === 'function' ? btn.text(selected) : btn.text
-              }}
-            </self-loading-button>
-          </template>
-          <el-button
-            v-if="hasSelect && hasDelete"
-            type="danger"
-            :size="buttonSize"
-            :disabled="selected.length === 0 || (single && selected.length > 1)"
-            @click="onDefaultDelete(single ? selected[0] : selected)"
-            >{{ deleteText }}</el-button
-          >
-
-          <!--@slot 额外的header内容, 当headerButtons不满足需求时可以使用，作用域传入selected -->
-          <slot name="header" :selected="selected" />
-
-          <!--@collapse 自定义折叠按钮, 默认的样式文案不满足时可以使用，scope 默认返回当前折叠状态 Boolean -->
-          <slot name="collapse" :isSearchCollapse="isSearchCollapse">
+      <div class="contentBox">
+        <el-form v-if="hasHeader">
+          <el-form-item>
             <el-button
-              v-if="canSearchCollapse"
-              type="default"
+              v-if="hasNew"
+              type="primary"
               :size="buttonSize"
-              :icon="`el-icon-arrow-${isSearchCollapse ? 'down' : 'up'}`"
-              @click="isSearchCollapse = !isSearchCollapse"
-              >{{ isSearchCollapse ? '展开' : '折叠' }}搜索</el-button
+              @click="onDefaultNew"
+              >{{ newText }}</el-button
             >
-          </slot>
-        </el-form-item>
-      </el-form>
-
-      <el-table
-        ref="table"
-        v-loading="loading"
-        v-bind="tableAttrs"
-        :data="data"
-        :row-class-name="rowClassName"
-        @selection-change="selectStrategy.onSelectionChange"
-        @select="selectStrategy.onSelect"
-        @select-all="selectStrategy.onSelectAll($event, selectable)"
-      >
-        <!--TODO 不用jsx写, 感觉template逻辑有点不清晰了-->
-        <template v-if="isTree">
-          <!--有多选-->
-          <template v-if="hasSelect">
-            <el-data-table-column
-              key="selection-key"
-              v-bind="{align: columnsAlign, ...columns[0]}"
-            />
-
-            <el-data-table-column
-              key="tree-ctrl"
-              v-bind="{align: columnsAlign, ...columns[1]}"
-            >
-              <template slot-scope="scope">
-                <span
-                  v-for="space in scope.row._level"
-                  :key="space"
-                  class="ms-tree-space"
-                />
-                <span
-                  v-if="iconShow(scope.$index, scope.row)"
-                  class="tree-ctrl"
-                  @click="toggleExpanded(scope.$index)"
-                >
-                  <i
-                    :class="`el-icon-${scope.row._expanded ? 'minus' : 'plus'}`"
-                  />
-                </span>
-                {{ scope.row[columns[1].prop] }}
-              </template>
-            </el-data-table-column>
-
-            <el-data-table-column
-              v-for="col in columns.filter((c, i) => i !== 0 && i !== 1)"
-              :key="col.prop"
-              v-bind="{align: columnsAlign, ...col}"
-            />
-          </template>
-
-          <!--无选择-->
-          <template v-else>
-            <!--展开这列, 丢失 el-data-table-column属性-->
-            <el-data-table-column
-              key="tree-ctrl"
-              v-bind="{align: columnsAlign, ...columns[0]}"
-            >
-              <template slot-scope="scope">
-                <span
-                  v-for="space in scope.row._level"
-                  :key="space"
-                  class="ms-tree-space"
-                />
-
-                <span
-                  v-if="iconShow(scope.$index, scope.row)"
-                  class="tree-ctrl"
-                  @click="toggleExpanded(scope.$index)"
-                >
-                  <i
-                    :class="`el-icon-${scope.row._expanded ? 'minus' : 'plus'}`"
-                  />
-                </span>
-                {{ scope.row[columns[0].prop] }}
-              </template>
-            </el-data-table-column>
-
-            <el-data-table-column
-              v-for="col in columns.filter((c, i) => i !== 0)"
-              :key="col.prop"
-              v-bind="{align: columnsAlign, ...col}"
-            />
-          </template>
-        </template>
-
-        <!--非树-->
-        <template v-else>
-          <el-data-table-column
-            v-for="col in columns"
-            :key="col.prop"
-            v-bind="{align: columnsAlign, ...col}"
-          />
-        </template>
-
-        <!--默认操作列-->
-        <el-data-table-column
-          v-if="hasOperation"
-          label="操作"
-          v-bind="{align: columnsAlign, ...operationAttrs}"
-        >
-          <template slot-scope="scope">
-            <self-loading-button
-              v-if="isTree && hasNew"
-              type="primary"
-              :size="operationButtonType === 'text' ? '' : buttonSize"
-              :is-text="operationButtonType === 'text'"
-              @click="onDefaultNew(scope.row)"
-            >
-              {{ newText }}
-            </self-loading-button>
-            <self-loading-button
-              v-if="hasEdit"
-              type="primary"
-              :size="operationButtonType === 'text' ? '' : buttonSize"
-              :is-text="operationButtonType === 'text'"
-              @click="onDefaultEdit(scope.row)"
-            >
-              {{ editText }}
-            </self-loading-button>
-            <self-loading-button
-              v-if="hasView"
-              type="primary"
-              :size="operationButtonType === 'text' ? '' : buttonSize"
-              :is-text="operationButtonType === 'text'"
-              @click="onDefaultView(scope.row)"
-            >
-              {{ viewText }}
-            </self-loading-button>
-            <template v-for="(btn, i) in extraButtons">
+            <template v-for="(btn, i) in headerButtons">
               <self-loading-button
-                v-if="'show' in btn ? btn.show(scope.row) : true"
+                v-if="'show' in btn ? btn.show(selected) : true"
                 :key="i"
-                :is-text="operationButtonType === 'text'"
-                v-bind="btn"
+                :disabled="'disabled' in btn ? btn.disabled(selected) : false"
                 :click="btn.atClick"
-                :params="scope.row"
+                :params="selected"
                 :callback="getList"
-                :disabled="'disabled' in btn ? btn.disabled(scope.row) : false"
+                :size="buttonSize"
+                v-bind="btn"
               >
                 {{
-                  typeof btn.text === 'function'
-                    ? btn.text(scope.row)
-                    : btn.text
+                  typeof btn.text === 'function' ? btn.text(selected) : btn.text
                 }}
               </self-loading-button>
             </template>
-            <self-loading-button
-              v-if="!hasSelect && hasDelete && canDelete(scope.row)"
+            <el-button
+              v-if="hasSelect && hasDelete"
               type="danger"
-              :size="operationButtonType === 'text' ? '' : buttonSize"
-              :is-text="operationButtonType === 'text'"
-              @click="onDefaultDelete(scope.row)"
+              :size="buttonSize"
+              :disabled="
+                selected.length === 0 || (single && selected.length > 1)
+              "
+              @click="onDefaultDelete(single ? selected[0] : selected)"
+              >{{ deleteText }}</el-button
             >
-              {{ deleteText }}
-            </self-loading-button>
+
+            <!--@slot 额外的header内容, 当headerButtons不满足需求时可以使用，作用域传入selected -->
+            <slot name="header" :selected="selected" />
+          </el-form-item>
+        </el-form>
+
+        <el-table
+          ref="table"
+          v-loading="loading"
+          v-bind="tableAttrs"
+          :data="data"
+          :row-class-name="rowClassName"
+          @selection-change="selectStrategy.onSelectionChange"
+          @select="selectStrategy.onSelect"
+          @select-all="selectStrategy.onSelectAll($event, selectable)"
+        >
+          <!--TODO 不用jsx写, 感觉template逻辑有点不清晰了-->
+          <template v-if="isTree">
+            <!--有多选-->
+            <template v-if="hasSelect">
+              <el-data-table-column
+                key="selection-key"
+                v-bind="{align: columnsAlign, ...columns[0]}"
+              />
+
+              <el-data-table-column
+                key="tree-ctrl"
+                v-bind="{align: columnsAlign, ...columns[1]}"
+              >
+                <template slot-scope="scope">
+                  <span
+                    v-for="space in scope.row._level"
+                    :key="space"
+                    class="ms-tree-space"
+                  />
+                  <span
+                    v-if="iconShow(scope.$index, scope.row)"
+                    class="tree-ctrl"
+                    @click="toggleExpanded(scope.$index)"
+                  >
+                    <i
+                      :class="
+                        `el-icon-${scope.row._expanded ? 'minus' : 'plus'}`
+                      "
+                    />
+                  </span>
+                  {{ scope.row[columns[1].prop] }}
+                </template>
+              </el-data-table-column>
+
+              <el-data-table-column
+                v-for="col in columns.filter((c, i) => i !== 0 && i !== 1)"
+                :key="col.prop"
+                v-bind="{align: columnsAlign, ...col}"
+              />
+            </template>
+
+            <!--无选择-->
+            <template v-else>
+              <!--展开这列, 丢失 el-data-table-column属性-->
+              <el-data-table-column
+                key="tree-ctrl"
+                v-bind="{align: columnsAlign, ...columns[0]}"
+              >
+                <template slot-scope="scope">
+                  <span
+                    v-for="space in scope.row._level"
+                    :key="space"
+                    class="ms-tree-space"
+                  />
+
+                  <span
+                    v-if="iconShow(scope.$index, scope.row)"
+                    class="tree-ctrl"
+                    @click="toggleExpanded(scope.$index)"
+                  >
+                    <i
+                      :class="
+                        `el-icon-${scope.row._expanded ? 'minus' : 'plus'}`
+                      "
+                    />
+                  </span>
+                  {{ scope.row[columns[0].prop] }}
+                </template>
+              </el-data-table-column>
+
+              <el-data-table-column
+                v-for="col in columns.filter((c, i) => i !== 0)"
+                :key="col.prop"
+                v-bind="{align: columnsAlign, ...col}"
+              />
+            </template>
           </template>
-        </el-data-table-column>
 
-        <!--@slot 自定义操作列, 当extraButtons不满足需求时可以使用 -->
-        <slot />
-      </el-table>
+          <!--非树-->
+          <template v-else>
+            <el-data-table-column
+              v-for="col in columns"
+              :key="col.prop"
+              v-bind="{align: columnsAlign, ...col}"
+            />
+          </template>
 
-      <el-pagination
-        v-if="hasPagination"
-        :current-page="page"
-        :page-sizes="paginationSizes"
-        :page-size="size"
-        :total="total"
-        style="text-align: right; padding: 10px 0;"
-        :layout="paginationLayout"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-      />
+          <!--默认操作列-->
+          <el-data-table-column
+            v-if="hasOperation"
+            label="操作"
+            v-bind="{align: columnsAlign, ...operationAttrs}"
+          >
+            <template slot-scope="scope">
+              <self-loading-button
+                v-if="isTree && hasNew"
+                type="primary"
+                :size="operationButtonType === 'text' ? '' : buttonSize"
+                :is-text="operationButtonType === 'text'"
+                @click="onDefaultNew(scope.row)"
+              >
+                {{ newText }}
+              </self-loading-button>
+              <self-loading-button
+                v-if="hasEdit"
+                type="primary"
+                :size="operationButtonType === 'text' ? '' : buttonSize"
+                :is-text="operationButtonType === 'text'"
+                @click="onDefaultEdit(scope.row)"
+              >
+                {{ editText }}
+              </self-loading-button>
+              <self-loading-button
+                v-if="hasView"
+                type="primary"
+                :size="operationButtonType === 'text' ? '' : buttonSize"
+                :is-text="operationButtonType === 'text'"
+                @click="onDefaultView(scope.row)"
+              >
+                {{ viewText }}
+              </self-loading-button>
+              <template v-for="(btn, i) in extraButtons">
+                <self-loading-button
+                  v-if="'show' in btn ? btn.show(scope.row) : true"
+                  :key="i"
+                  :is-text="operationButtonType === 'text'"
+                  v-bind="btn"
+                  :click="btn.atClick"
+                  :params="scope.row"
+                  :callback="getList"
+                  :disabled="
+                    'disabled' in btn ? btn.disabled(scope.row) : false
+                  "
+                >
+                  {{
+                    typeof btn.text === 'function'
+                      ? btn.text(scope.row)
+                      : btn.text
+                  }}
+                </self-loading-button>
+              </template>
+              <self-loading-button
+                v-if="!hasSelect && hasDelete && canDelete(scope.row)"
+                type="danger"
+                :size="operationButtonType === 'text' ? '' : buttonSize"
+                :is-text="operationButtonType === 'text'"
+                @click="onDefaultDelete(scope.row)"
+              >
+                {{ deleteText }}
+              </self-loading-button>
+            </template>
+          </el-data-table-column>
 
+          <!--@slot 自定义操作列, 当extraButtons不满足需求时可以使用 -->
+          <slot />
+        </el-table>
+
+        <el-pagination
+          v-if="hasPagination"
+          :current-page="page"
+          :page-sizes="paginationSizes"
+          :page-size="size"
+          :total="total"
+          style="text-align: right; padding: 20px 0 10px;"
+          :layout="paginationLayout"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
       <the-dialog
         ref="dialog"
         :new-title="dialogNewTitle"
@@ -789,6 +800,10 @@ export default {
       default() {
         return {}
       }
+    },
+    isSearchCollapse: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
@@ -808,7 +823,6 @@ export default {
       // 初始的extraQuery值, 重置查询时, 会用到
       // JSON.stringify是为了后面深拷贝作准备
       initExtraQuery: JSON.stringify(this.extraQuery || this.customQuery || {}),
-      isSearchCollapse: false,
       showNoData: false
     }
   },
@@ -1256,6 +1270,128 @@ export default {
 .el-data-table {
   @color-blue: #2196f3;
   @space-width: 18px;
+
+  .el-form {
+    font-size: 0;
+  }
+
+  .el-table {
+    .el-table__header {
+      th {
+        background-color: #f4f6fa;
+      }
+
+      tr {
+        background-color: #f4f6fa;
+      }
+    }
+  }
+
+  .el-button--primary {
+    color: #fff;
+    background-color: #2878ff;
+    border-color: #2878ff;
+    border: 0;
+  }
+
+  .el-button--warning {
+    color: #fff;
+    background-color: #f5a623;
+    border-color: #f5a623;
+    border: 0;
+  }
+
+  .el-button--danger {
+    color: #fff;
+    background-color: #e24156;
+    border-color: #e24156;
+    border: 0;
+  }
+
+  .el-button--text {
+    color: #2878ff;
+    background: 0 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .el-button--primary.is-plain {
+    color: #2878ff;
+  }
+
+  .el-button--danger.is-plain {
+    color: #e24156;
+  }
+
+  .el-form-item {
+    margin-bottom: 10px;
+
+    &__content {
+      line-height: 32px;
+    }
+
+    &__label {
+      line-height: 32px;
+    }
+  }
+
+  .searchForm {
+    padding: 20px 20px 6px;
+    border-bottom: 1px solid #e4e8f3;
+    position: relative;
+    // padding-right: 264px;
+    margin: 0 -20px;
+    // &::after {
+    //   content: '';
+    //   height: 1px;
+    //   background-color: #E4E8F3;
+    //   width: 100%;
+    //   display: block;
+    //   margin: 0 -20px;
+    // }
+    &__btns {
+      // position: absolute;
+      // top: 20px;
+      .el-form-item__content {
+        font-size: 0;
+      }
+    }
+
+    .el-button {
+      &--small {
+        padding: 10px 23px;
+        border-radius: 4px;
+      }
+    }
+  }
+
+  .contentBox {
+    padding: 20px 0;
+
+    .el-button {
+      &--small {
+        padding: 8px 23px;
+        border-radius: 4px;
+      }
+    }
+
+    .el-form-item {
+      &__content {
+        line-height: 28px;
+      }
+    }
+  }
+
+  .el-input {
+    &__inner {
+      height: 32px;
+      line-height: 32px;
+    }
+
+    &__icon {
+      line-height: 32px;
+    }
+  }
 
   .ms-tree-space {
     position: relative;

@@ -790,10 +790,10 @@
     exec-sh "^0.3.2"
     minimist "^1.2.0"
 
-"@femessage/el-form-renderer@^1.6.0":
-  version "1.14.7"
-  resolved "https://registry.npmjs.org/@femessage/el-form-renderer/-/el-form-renderer-1.14.7.tgz#9e5774db7029bf50481857c0078e43886fc135e0"
-  integrity sha512-ZM/MJHLei4upGJdUO/Gu7YyPE4hpPLzSAHHKe61UTi/iG/9aNmW10FCDhPyIVcOzIsN1dvMhZtWBOcS6iRUFTw==
+"@drpackstore/el-form-renderer@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.npmjs.org/@drpackstore/el-form-renderer/-/el-form-renderer-1.0.1.tgz#488bf2b5385d452455de18f4a794496e7e088958"
+  integrity sha512-pAp/z30oqvaT/NaICHQCCiAAN0KMfZ8qpCipHtN1duaX5XrEO4/KzE1Zh5GwoQ3pCaZSgRlf6fTo/tARCY11oA==
   dependencies:
     lodash.clonedeep "^4.5.0"
     lodash.frompairs "^4.0.1"

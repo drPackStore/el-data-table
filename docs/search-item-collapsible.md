@@ -18,14 +18,14 @@ export default {
         {
           type: 'input',
           id: 'name',
-          label: '您的用户名',
+          label: '',
           collapsible: false,
           el: {placeholder: '请输入用户名'}
         },
         {
           type: 'select',
           id: 'area',
-          label: 'area',
+          label: '',
           remote: {
             url: 'https://mockapi.eolinker.com/IeZWjzy87c204a1f7030b2a17b00f3776ce0a07a5030a1b/el-form-renderer?q=remote',
           }
@@ -33,7 +33,7 @@ export default {
         {
           type: 'select',
           id: 'age',
-          label: '年龄',
+          label: '',
           el: {
             placeholder: '请输入年龄'
           },
@@ -49,17 +49,17 @@ export default {
         {
           type: 'input',
           id: 'favorite',
-          label: '喜欢的东西'
+          label: '',
         },
         {
           type: 'input',
           id: 'wishTravel',
-          label: '想去的地方'
+          label: ''
         },
         {
           type: 'select',
           id: 'lived',
-          label: '待过的地方',
+          label: '',
           options: [
             {
               label: '三番',
