@@ -1336,7 +1336,7 @@ export default {
   }
 
   .searchForm {
-    padding: 20px 20px 6px;
+    padding: 0 20px 0;
     border-bottom: 1px solid #e4e8f3;
     position: relative;
     // padding-right: 264px;
